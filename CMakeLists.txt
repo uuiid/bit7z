@@ -16,7 +16,7 @@ if( POLICY CMP0076 )
 endif()
 
 set( EXTERNAL_LIBS_DIR ${PROJECT_SOURCE_DIR}/third_party )
-set( 7ZIP_SOURCE_DIR ${EXTERNAL_LIBS_DIR}/7-zip )
+find_package(7zip CONFIG REQUIRED)
 
 # public headers
 set( PUBLIC_HEADERS
@@ -172,18 +172,24 @@ message( STATUS "Language Standard: C++${CMAKE_CXX_STANDARD}" )
 set( LIB_TARGET bit7z${ARCH_POSTFIX} )
 add_library( ${LIB_TARGET} STATIC )
 target_sources( ${LIB_TARGET}
-                PUBLIC ${PUBLIC_HEADERS}
+                # PUBLIC ${PUBLIC_HEADERS}
                 PRIVATE ${HEADERS} ${SOURCES} )
 
+target_sources(${LIB_TARGET}
+    PUBLIC
+    FILE_SET bit7z_headers TYPE HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include
+    FILES ${PUBLIC_HEADERS}
+)
+
+target_link_libraries(${LIB_TARGET} PRIVATE 7zip::7zip)
 # public includes
 target_include_directories( ${LIB_TARGET} PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
                                                  "$<INSTALL_INTERFACE:include>" )
 
 # private includes
 target_include_directories( ${LIB_TARGET} PRIVATE "${PROJECT_SOURCE_DIR}/include/bit7z"
-                                                  "${PROJECT_SOURCE_DIR}/src"
-                                                  "${EXTERNAL_LIBS_DIR}"
-                                                  "${7ZIP_SOURCE_DIR}/CPP/" )
+                                                  "${PROJECT_SOURCE_DIR}/src" )
 
 # 7-zip compilation definitions
 target_compile_definitions( ${LIB_TARGET} PRIVATE UNICODE _UNICODE )
@@ -213,3 +219,24 @@ if( BIT7Z_BUILD_DOCS )
     # docs
     add_subdirectory( docs )
 endif()
+    
+install(
+    TARGETS ${LIB_TARGET}
+    EXPORT ${PROJECT_NAME}_target
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    FILE_SET bit7z_headers
+)
+
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(${PROJECT_NAME}-config.cmake.in unofficial-${PROJECT_NAME}-config.cmake INSTALL_DESTINATION share/${PROJECT_NAME})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/unofficial-${PROJECT_NAME}-config.cmake DESTINATION share/${PROJECT_NAME})
+
+install(
+    EXPORT ${PROJECT_NAME}_target
+    NAMESPACE unofficial::${PROJECT_NAME}::
+    FILE ${PROJECT_NAME}-targets.cmake
+    DESTINATION share/${PROJECT_NAME}
+)

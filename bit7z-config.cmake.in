@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(7zip CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/bit7z-targets.cmake")
